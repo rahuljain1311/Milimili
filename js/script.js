@@ -10,11 +10,7 @@ var config = {
 firebase.initializeApp(config);
 
 var database = firebase.database().ref();
-var yourVideo = document.getElementById("yourVideo");
-var friendsVideo = document.getElementById("friendsVideo");
 var yourId = Math.floor(Math.random()*1000000000);
-
-
 
 //Create an account on Viagenie (http://numb.viagenie.ca/), and replace {'urls': 'turn:numb.viagenie.ca','credential': 'websitebeaver','username': 'websitebeaver@email.com'} with the information from your account
 var servers = {
@@ -26,9 +22,9 @@ var servers = {
         'username': 'rahuljain1311@gmail.com'}
     ]
 };
+
 var pc = new RTCPeerConnection(servers);
-pc.onicecandidate = (event => event.candidate?sendMessage(yourId, JSON.stringify({'ice': event.candidate})):console.log("Sent All Ice") );
-pc.onaddstream = (event => friendsVideo.srcObject = event.stream);
+pc.onicecandidate = (event => event.candidate?sendMessage(yourId, JSON.stringify({'ice': event.candidate})) : console.log("Sent All Ice") );
 
 function sendMessage(senderId, data) {
     console.log("Sent All Ice senderId", senderId, "data = ", data);
@@ -55,14 +51,73 @@ function readMessage(data) {
 
 database.on('child_added', readMessage);
 
-function showMyFace() {
-  navigator.mediaDevices.getUserMedia({audio:true, video:true})
-    .then(stream => yourVideo.srcObject = stream)
-    .then(stream => pc.addStream(stream));
-}
-
-function showFriendsFace() {
+function startGame() {
   pc.createOffer()
     .then(offer => pc.setLocalDescription(offer) )
     .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})) );
+}
+
+/*************************** ICE connection established ************************************/
+
+
+
+// Offerer side
+var channel = pc.createDataChannel("milimili");
+channel.onopen = function(event) {
+  channel.send('Player 1 ', yourId);
+}
+channel.onmessage = function(event) {
+
+    var object = JSON.parse(event.data);
+    console.log('A message received on Offerer side', object);
+    if(object.id){ // this will be my logic
+        if(object.id !== yourId){
+            document.getElementById('chat').appendChild(document.createElement('div'));
+            document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+        }
+    }
+    else 
+        console.log('Player1: ', event.data);
+}
+
+
+// Answerer side
+pc.ondatachannel = function(event) {
+  var channel = event.channel;
+  channel.onopen = function(event) {
+    channel.send('Hi back from answerer!');
+  }
+  channel.onmessage = function(event) {
+
+    var object = JSON.parse(event.data);
+    console.log('A message received on Answerer side', object, object.id);
+    if(object.id){ // this will be my logic
+        if(object.id != yourId){
+            document.getElementById('chat').appendChild(document.createElement('div'));
+            document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+        }
+    }
+    else 
+        console.log('Here in onmessage of Offerer', event.data);
+  }
+}
+
+function chat() {
+    var message = document.getElementById("myInput").value;
+    var data = {
+        id: yourId,
+        message: message
+    };
+    console.log('data = ', data);
+    document.getElementById('chat').appendChild(document.createElement('div'));
+    document.getElementById("chat").lastChild.innerHTML += yourId + ': ' + message;
+    channel.send(JSON.stringify(data));
+}
+
+// handle enter plain javascript
+function handleEnter(e){
+    var keycode = (e.keyCode ? e.keyCode : e.which);
+    if (keycode == '13') {
+      chat();
+    }
 }
