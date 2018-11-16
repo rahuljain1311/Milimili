@@ -10,7 +10,7 @@ var config = {
 firebase.initializeApp(config);
 
 var database = firebase.database().ref();
-var yourId = Math.floor(Math.random()*1000000000);
+var myId = Math.floor(Math.random()*1000000000);
 
 //Create an account on Viagenie (http://numb.viagenie.ca/), and replace {'urls': 'turn:numb.viagenie.ca','credential': 'websitebeaver','username': 'websitebeaver@email.com'} with the information from your account
 var servers = {
@@ -23,43 +23,103 @@ var servers = {
     ]
 };
 
-var pc = new RTCPeerConnection(servers);
-pc.onicecandidate = (event => event.candidate?sendMessage(yourId, JSON.stringify({'ice': event.candidate})) : console.log("Sent All Ice") );
+var peerConnections = {};
 
-function sendMessage(senderId, data) {
-    console.log("Sent All Ice senderId", senderId, "data = ", data);
-    var msg = database.push({ sender: senderId, message: data });
+/*************************** Config setup complete ************************************/
+
+function enterGame(){
+
+    const name = 'RJ'
+    sendMessageFirebase2(myId, name);
+}
+
+function sendMessageFirebase2(senderId, data) {
+
+    var msg = database.push({ senderId: senderId, message: data });
     msg.remove();
 }
 
-function readMessage(data) {
+function sendMessageFirebase3(senderId, data, receiverId) {
 
-    var msg = JSON.parse(data.val().message);
-    var sender = data.val().sender;
-    if (sender != yourId) {
-        if (msg.ice != undefined)
-            pc.addIceCandidate(new RTCIceCandidate(msg.ice));
-        else if (msg.sdp.type == "offer")
-            pc.setRemoteDescription(new RTCSessionDescription(msg.sdp))
-              .then(() => pc.createAnswer())
-              .then(answer => pc.setLocalDescription(answer))
-              .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})));
-        else if (msg.sdp.type == "answer")
-            pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-    }
-};
+    var msg = database.push({ senderId: senderId, message: data, receiverId: receiverId});
+    msg.remove();
+}
 
 database.on('child_added', readMessage);
 
-function startGame() {
-  pc.createOffer()
-    .then(offer => pc.setLocalDescription(offer) )
-    .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})) );
+function readMessage(data) {
+
+    var senderId = data.val().senderId;
+    var senderMessage = JSON.parse(data.val().message);
+    var receiverId = data.val().receiverId;
+    
+    if(!senderId){ // We dont need to process this case
+
+    }
+    else if(!receiverId){ // The sender is broadcasting its unique id for the first time
+
+        peerConnections.senderId = new RTCPeerConnection(servers);
+        var pc = peerConnections[senderId];
+        pc.onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
+        pc.createOffer()
+            .then(offer => pc.setLocalDescription(offer) )
+            .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': pc.localDescription}), senderId) );
+
+        // Update players dropdown
+        var selectPlayersDropDown = document.getElementById("players"); 
+        var player = document.createElement("option");
+        player.textContent = senderId;
+        player.value = senderId;
+        selectPlayersDropDown.appendChild(player);
+
+        // TODO: We need to remove the users when they close the browser window 
+    }
+    else { // Sender just wants to talk to Receiver
+
+        if(myId === receiverId && myId !== senderId){ // Message is meant for the receiver
+
+            var pc = peerConnections[senderId];
+            if (senderMessage.ice != undefined)
+                pc.addIceCandidate(new RTCIceCandidate(senderMessage.ice));
+            else if (senderMessage.sdp.type == "offer")
+                pc.setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
+                    .then(() => pc.createAnswer())
+                    .then(answer => pc.setLocalDescription(answer))
+                    .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': pc.localDescription}), senderId));
+            else if (senderMessage.sdp.type == "answer")
+                pc.setRemoteDescription(new RTCSessionDescription(senderMessage.sdp));
+        }
+    }
 }
 
 /*************************** ICE connection established ************************************/
 
 
+// var pc = new RTCPeerConnection(servers);
+// pc.onicecandidate = (event => event.candidate?sendMessage(yourId, JSON.stringify({'ice': event.candidate})) : console.log("Sent All Ice") );
+
+// function startGame() {
+//   pc.createOffer()
+//     .then(offer => pc.setLocalDescription(offer) )
+//     .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})) );
+// }
+
+// function readMessage(data) {
+
+//     var msg = JSON.parse(data.val().message);
+//     var sender = data.val().sender;
+//     if (sender != yourId) {
+//         if (msg.ice != undefined)
+//             pc.addIceCandidate(new RTCIceCandidate(msg.ice));
+//         else if (msg.sdp.type == "offer")
+//             pc.setRemoteDescription(new RTCSessionDescription(msg.sdp))
+//               .then(() => pc.createAnswer())
+//               .then(answer => pc.setLocalDescription(answer))
+//               .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})));
+//         else if (msg.sdp.type == "answer")
+//             pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+//     }
+// };
 
 // Offerer side
 var channel = pc.createDataChannel("milimili");

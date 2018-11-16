@@ -2,13 +2,20 @@
   <head>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/style.css">
+    <script src="https://www.gstatic.com/firebasejs/4.9.0/firebase.js"></script>
+    <script src="js/script.js"></script>
   </head>
   <body>
     <br />
-    <button onclick="startGame()" type="button" class="btn btn-primary btn-lg"><span class="glyphicon glyphicon-facetime-video" aria-hidden="true"></span> Setup WEBRTC connection </button>
-    <script src="https://www.gstatic.com/firebasejs/4.9.0/firebase.js"></script>
-    <script src="js/script.js"></script>
+    <button onclick="enterGame()" type="button" class="btn btn-primary btn-lg"><span class="glyphicon glyphicon-facetime-video" aria-hidden="true"></span> Enter Game? </button>
+    
     <div id="chat"> </div>
+    <br />
+
+    <select id="players">
+      <option>Choose a player</option>
+    </select>
+
     </br>
     <input type="text" id="myInput" onkeypress="handleEnter(event)" onfocus="this.value='';">
   </body>
