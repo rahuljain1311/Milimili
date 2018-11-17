@@ -24,19 +24,20 @@ var servers = {
 };
 
 var peerConnections = {};
+var pc;
 
 /*************************** Config setup complete ************************************/
 
 function enterGame(){
 
     const name = 'RJ'
-    sendMessageFirebase2(myId, name);
+    sendMessageFirebase2(myId, JSON.stringify({'name': name}));
 }
 
 function sendMessageFirebase2(senderId, data) {
 
     var msg = database.push({ senderId: senderId, message: data });
-    msg.remove();
+    // msg.remove();
 }
 
 function sendMessageFirebase3(senderId, data, receiverId) {
@@ -56,28 +57,32 @@ function readMessage(data) {
     if(!senderId){ // We dont need to process this case
 
     }
-    else if(!receiverId){ // The sender is broadcasting its unique id for the first time
+    else if (myId !== senderId) {
 
-        peerConnections.senderId = new RTCPeerConnection(servers);
-        var pc = peerConnections[senderId];
-        pc.onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
-        pc.createOffer()
-            .then(offer => pc.setLocalDescription(offer) )
-            .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': pc.localDescription}), senderId) );
+        console.log('read message, I am not the sender', myId);
 
-        // Update players dropdown
-        var selectPlayersDropDown = document.getElementById("players"); 
-        var player = document.createElement("option");
-        player.textContent = senderId;
-        player.value = senderId;
-        selectPlayersDropDown.appendChild(player);
+        if(!receiverId){ // The sender is broadcasting its unique id for the first time
 
-        // TODO: We need to remove the users when they close the browser window 
-    }
-    else { // Sender just wants to talk to Receiver
+            console.log('Sender is broadcasting= ', senderId);
 
-        if(myId === receiverId && myId !== senderId){ // Message is meant for the receiver
-
+            peerConnections.senderId = new RTCPeerConnection(servers);
+            pc = peerConnections[senderId];
+            pc.onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
+            pc.createOffer()
+                .then(offer => pc.setLocalDescription(offer) )
+                .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': pc.localDescription}), senderId) );
+    
+            // Update players dropdown
+            var selectPlayersDropDown = document.getElementById("players"); 
+            var player = document.createElement("option");
+            player.textContent = senderId;
+            player.value = senderId;
+            selectPlayersDropDown.appendChild(player);
+    
+            // TODO: We need to remove the users when they close the browser window 
+        }
+        else if(myId === receiverId ) { // Sender just wants to talk to Receiver and Message is meant for the receiver
+    
             var pc = peerConnections[senderId];
             if (senderMessage.ice != undefined)
                 pc.addIceCandidate(new RTCIceCandidate(senderMessage.ice));
@@ -122,62 +127,62 @@ function readMessage(data) {
 // };
 
 // Offerer side
-var channel = pc.createDataChannel("milimili");
-channel.onopen = function(event) {
-  channel.send('Player 1 ', yourId);
-}
-channel.onmessage = function(event) {
+// var channel = pc.createDataChannel("milimili");
+// channel.onopen = function(event) {
+//   channel.send('Player 1 ', yourId);
+// }
+// channel.onmessage = function(event) {
 
-    var object = JSON.parse(event.data);
-    console.log('A message received on Offerer side', object);
-    if(object.id){ // this will be my logic
-        if(object.id !== yourId){
-            document.getElementById('chat').appendChild(document.createElement('div'));
-            document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-        }
-    }
-    else 
-        console.log('Player1: ', event.data);
-}
+//     var object = JSON.parse(event.data);
+//     console.log('A message received on Offerer side', object);
+//     if(object.id){ // this will be my logic
+//         if(object.id !== yourId){
+//             document.getElementById('chat').appendChild(document.createElement('div'));
+//             document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+//         }
+//     }
+//     else 
+//         console.log('Player1: ', event.data);
+// }
 
 
-// Answerer side
-pc.ondatachannel = function(event) {
-  var channel = event.channel;
-  channel.onopen = function(event) {
-    channel.send('Hi back from answerer!');
-  }
-  channel.onmessage = function(event) {
+// // Answerer side
+// pc.ondatachannel = function(event) {
+//   var channel = event.channel;
+//   channel.onopen = function(event) {
+//     channel.send('Hi back from answerer!');
+//   }
+//   channel.onmessage = function(event) {
 
-    var object = JSON.parse(event.data);
-    console.log('A message received on Answerer side', object, object.id);
-    if(object.id){ // this will be my logic
-        if(object.id != yourId){
-            document.getElementById('chat').appendChild(document.createElement('div'));
-            document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-        }
-    }
-    else 
-        console.log('Here in onmessage of Offerer', event.data);
-  }
-}
+//     var object = JSON.parse(event.data);
+//     console.log('A message received on Answerer side', object, object.id);
+//     if(object.id){ // this will be my logic
+//         if(object.id != yourId){
+//             document.getElementById('chat').appendChild(document.createElement('div'));
+//             document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+//         }
+//     }
+//     else 
+//         console.log('Here in onmessage of Offerer', event.data);
+//   }
+// }
 
-function chat() {
-    var message = document.getElementById("myInput").value;
-    var data = {
-        id: yourId,
-        message: message
-    };
-    console.log('data = ', data);
-    document.getElementById('chat').appendChild(document.createElement('div'));
-    document.getElementById("chat").lastChild.innerHTML += yourId + ': ' + message;
-    channel.send(JSON.stringify(data));
-}
+// function chat() {
+//     var message = document.getElementById("myInput").value;
+//     var data = {
+//         id: yourId,
+//         message: message
+//     };
+//     console.log('data = ', data);
+//     document.getElementById('chat').appendChild(document.createElement('div'));
+//     document.getElementById("chat").lastChild.innerHTML += yourId + ': ' + message;
+//     channel.send(JSON.stringify(data));
+// }
 
-// handle enter plain javascript
-function handleEnter(e){
-    var keycode = (e.keyCode ? e.keyCode : e.which);
-    if (keycode == '13') {
-      chat();
-    }
-}
+// // handle enter plain javascript
+// function handleEnter(e){
+//     var keycode = (e.keyCode ? e.keyCode : e.which);
+//     if (keycode == '13') {
+//       chat();
+//     }
+// }
