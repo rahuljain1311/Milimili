@@ -70,18 +70,24 @@ function readMessage(data) {
 
             peerConnections[senderId] = new RTCPeerConnection(servers);
             peerConnections[senderId].onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
-            peerConnections[senderId].createOffer()
+            return peerConnections[senderId].createOffer()
                 .then(offer => { console.log(offer); peerConnections[senderId].setLocalDescription(offer);  } )
-                .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[senderId].localDescription}), senderId) );
+                .then(() => {
+                    sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[senderId].localDescription}), senderId);
+                    
+                });
+                // .then(() => {
+                //     // Update players dropdown
+                //     var selectPlayersDropDown = document.getElementById("players"); 
+                //     var player = document.createElement("option");
+                //     player.textContent = senderId;
+                //     player.value = senderId;
+                //     selectPlayersDropDown.appendChild(player);
+
+                //     // TODO: We need to remove the users when they close the browser window 
+                // });
     
-            // Update players dropdown
-            var selectPlayersDropDown = document.getElementById("players"); 
-            var player = document.createElement("option");
-            player.textContent = senderId;
-            player.value = senderId;
-            selectPlayersDropDown.appendChild(player);
-    
-            // TODO: We need to remove the users when they close the browser window 
+            
         }
         else if(myId === receiverId ) { // Sender just wants to talk to Receiver and Message is meant for the receiver
     
