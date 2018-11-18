@@ -122,7 +122,6 @@ function readMessage(data) {
     
     if (senderId && myId !== senderId) {
 
-        console.log('does peer connection exist?', JSON.stringify(peerConnections));
         if(!receiverId && !peerConnections[senderId]){ // The sender is broadcasting its unique id for the first time
 
             console.log('Sender is broadcasting= ', senderId);  
@@ -168,6 +167,8 @@ function chat() {
     console.log('data = ', data);
     document.getElementById('chat').appendChild(document.createElement('div'));
     document.getElementById("chat").lastChild.innerHTML += myId + ': ' + message;
+    console.log('channel = ', channel);
+    console.log('channel[receiverId] = ', channel[receiverId]);
     channel[receiverId].send(JSON.stringify(data));
 }
 
