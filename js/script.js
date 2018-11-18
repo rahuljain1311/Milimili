@@ -28,10 +28,31 @@ var pc = {};
 
 /*************************** Config setup complete ************************************/
 
-function enterGame(){
+function connectWithOtherPlayers(){
 
+    // TODO: Update name of each sender
     const name = 'RJ'
     sendMessageFirebase2(myId, JSON.stringify({'name': name}));
+}
+
+function shareICECandidates (){
+    
+    for (var receiverId in peerConnections){
+        peerConnections[receiverId].createOffer()
+            .then(offer => { console.log(offer); peerConnections[receiverId].setLocalDescription(offer);  } )
+            .then(() => {
+                sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[receiverId].localDescription}), receiverId);
+                
+            });
+        // Update players dropdown
+        var selectPlayersDropDown = document.getElementById("players"); 
+        var player = document.createElement("option");
+        player.textContent = receiverId;
+        player.value = receiverId;
+        selectPlayersDropDown.appendChild(player);
+
+        // TODO: We need to remove the users when they close the browser window 
+    }
 }
 
 function sendMessageFirebase2(senderId, data) {
@@ -62,30 +83,14 @@ function readMessage(data) {
         console.log('does peer connection exist?', JSON.stringify(peerConnections));
         if(!receiverId && !peerConnections[senderId]){ // The sender is broadcasting its unique id for the first time
 
-            console.log('Sender is broadcasting= ', senderId);
+            console.log('Sender is broadcasting= ', senderId);  
             
-            
+            // TODO: Update name of each sender
             const name = 'RJ'
             sendMessageFirebase2(myId, JSON.stringify({'name': name}));
 
             peerConnections[senderId] = new RTCPeerConnection(servers);
             peerConnections[senderId].onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
-            return peerConnections[senderId].createOffer()
-                .then(offer => { console.log(offer); peerConnections[senderId].setLocalDescription(offer);  } )
-                .then(() => {
-                    sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[senderId].localDescription}), senderId);
-                    
-                });
-                // .then(() => {
-                //     // Update players dropdown
-                //     var selectPlayersDropDown = document.getElementById("players"); 
-                //     var player = document.createElement("option");
-                //     player.textContent = senderId;
-                //     player.value = senderId;
-                //     selectPlayersDropDown.appendChild(player);
-
-                //     // TODO: We need to remove the users when they close the browser window 
-                // });
     
             
         }
