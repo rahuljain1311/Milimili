@@ -24,7 +24,7 @@ var servers = {
 };
 
 var peerConnections = {};
-var pc;
+var pc = {};
 
 /*************************** Config setup complete ************************************/
 
@@ -42,6 +42,7 @@ function sendMessageFirebase2(senderId, data) {
 
 function sendMessageFirebase3(senderId, data, receiverId) {
 
+    console.log('sender = ', senderId, 'receiver = ', receiverId, 'data = ', data);
     var msg = database.push({ senderId: senderId, message: data, receiverId: receiverId});
     msg.remove();
 }
@@ -66,11 +67,13 @@ function readMessage(data) {
             console.log('Sender is broadcasting= ', senderId);
 
             peerConnections.senderId = new RTCPeerConnection(servers);
-            pc = peerConnections.senderId;
-            pc.onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
-            pc.createOffer()
-                .then(offer => pc.setLocalDescription(offer) )
-                .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': pc.localDescription}), senderId) );
+            console.log(peerConnections.senderId );
+            pc.senderId = peerConnections.senderId;
+            console.log(pc.senderId );
+            peerConnections.senderId.onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
+            peerConnections.senderId.createOffer()
+                .then(offer => { peerConnections.senderId.setLocalDescription(offer); console.log(offer); } )
+                .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections.senderId.localDescription}), senderId) );
     
             // Update players dropdown
             var selectPlayersDropDown = document.getElementById("players"); 
@@ -83,16 +86,16 @@ function readMessage(data) {
         }
         else if(myId === receiverId ) { // Sender just wants to talk to Receiver and Message is meant for the receiver
     
-            pc = peerConnections.senderId;
+            peerConnections.senderId = peerConnections.senderId;
             if (senderMessage.ice != undefined)
-                pc.addIceCandidate(new RTCIceCandidate(senderMessage.ice));
+                peerConnections.senderId.addIceCandidate(new RTCIceCandidate(senderMessage.ice));
             else if (senderMessage.sdp.type == "offer")
-                pc.setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
-                    .then(() => pc.createAnswer())
-                    .then(answer => pc.setLocalDescription(answer))
-                    .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': pc.localDescription}), senderId));
+                peerConnections.senderId.setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
+                    .then(() => peerConnections.senderId.createAnswer())
+                    .then(answer => peerConnections.senderId.setLocalDescription(answer))
+                    .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections.senderId.localDescription}), senderId));
             else if (senderMessage.sdp.type == "answer")
-                pc.setRemoteDescription(new RTCSessionDescription(senderMessage.sdp));
+                peerConnections.senderId.setRemoteDescription(new RTCSessionDescription(senderMessage.sdp));
         }
     }
 }
