@@ -37,7 +37,7 @@ function enterGame(){
 function sendMessageFirebase2(senderId, data) {
 
     var msg = database.push({ senderId: senderId, message: data });
-    // msg.remove();
+    msg.remove();
 }
 
 function sendMessageFirebase3(senderId, data, receiverId) {
@@ -53,20 +53,20 @@ function readMessage(data) {
     var senderId = data.val().senderId;
     var senderMessage = JSON.parse(data.val().message);
     var receiverId = data.val().receiverId;
+
+    console.log(' reading message --- myid = ',myId,  'senderId = ', senderId);
     
     if(!senderId){ // We dont need to process this case
 
     }
     else if (myId !== senderId) {
 
-        console.log('read message, I am not the sender', myId);
-
         if(!receiverId){ // The sender is broadcasting its unique id for the first time
 
             console.log('Sender is broadcasting= ', senderId);
 
             peerConnections.senderId = new RTCPeerConnection(servers);
-            pc = peerConnections[senderId];
+            pc = peerConnections.senderId;
             pc.onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
             pc.createOffer()
                 .then(offer => pc.setLocalDescription(offer) )
@@ -83,7 +83,7 @@ function readMessage(data) {
         }
         else if(myId === receiverId ) { // Sender just wants to talk to Receiver and Message is meant for the receiver
     
-            var pc = peerConnections[senderId];
+            pc = peerConnections.senderId;
             if (senderMessage.ice != undefined)
                 pc.addIceCandidate(new RTCIceCandidate(senderMessage.ice));
             else if (senderMessage.sdp.type == "offer")
