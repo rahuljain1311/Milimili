@@ -55,25 +55,24 @@ function readMessage(data) {
     var senderMessage = JSON.parse(data.val().message);
     var receiverId = data.val().receiverId;
 
-    console.log(' reading message --- myid = ',myId,  'senderId = ', senderId);
+    console.log(' reading message --- myid = ',myId,  'senderId = ', senderId, myId !== senderId);
     
-    if(!senderId){ // We dont need to process this case
+    if (senderId && myId !== senderId) {
 
-    }
-    else if (myId !== senderId) {
-
-        if(!receiverId){ // The sender is broadcasting its unique id for the first time
+        console.log('does peer connection exist?', JSON.stringify(peerConnections));
+        if(!receiverId && !peerConnections[senderId]){ // The sender is broadcasting its unique id for the first time
 
             console.log('Sender is broadcasting= ', senderId);
+            
+            
+            const name = 'RJ'
+            sendMessageFirebase2(myId, JSON.stringify({'name': name}));
 
-            peerConnections.senderId = new RTCPeerConnection(servers);
-            console.log(peerConnections.senderId );
-            pc.senderId = peerConnections.senderId;
-            console.log(pc.senderId );
-            peerConnections.senderId.onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
-            peerConnections.senderId.createOffer()
-                .then(offer => { peerConnections.senderId.setLocalDescription(offer); console.log(offer); } )
-                .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections.senderId.localDescription}), senderId) );
+            peerConnections[senderId] = new RTCPeerConnection(servers);
+            peerConnections[senderId].onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
+            peerConnections[senderId].createOffer()
+                .then(offer => { console.log(offer); peerConnections[senderId].setLocalDescription(offer);  } )
+                .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[senderId].localDescription}), senderId) );
     
             // Update players dropdown
             var selectPlayersDropDown = document.getElementById("players"); 
@@ -86,16 +85,15 @@ function readMessage(data) {
         }
         else if(myId === receiverId ) { // Sender just wants to talk to Receiver and Message is meant for the receiver
     
-            peerConnections.senderId = peerConnections.senderId;
             if (senderMessage.ice != undefined)
-                peerConnections.senderId.addIceCandidate(new RTCIceCandidate(senderMessage.ice));
+                peerConnections[senderId].addIceCandidate(new RTCIceCandidate(senderMessage.ice));
             else if (senderMessage.sdp.type == "offer")
-                peerConnections.senderId.setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
-                    .then(() => peerConnections.senderId.createAnswer())
-                    .then(answer => peerConnections.senderId.setLocalDescription(answer))
-                    .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections.senderId.localDescription}), senderId));
+                peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
+                    .then(() => peerConnections[senderId].createAnswer())
+                    .then(answer => peerConnections[senderId].setLocalDescription(answer))
+                    .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[senderId].localDescription}), senderId));
             else if (senderMessage.sdp.type == "answer")
-                peerConnections.senderId.setRemoteDescription(new RTCSessionDescription(senderMessage.sdp));
+                peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp));
         }
     }
 }
