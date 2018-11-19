@@ -37,71 +37,81 @@ function connectWithOtherPlayers(){
 
 function shareICECandidates (){
     
+    const promises = [];
     for (var receiverId in peerConnections){
-        peerConnections[receiverId].createOffer()
-            .then(offer => { 
-                
-                console.log(offer); peerConnections[receiverId].setLocalDescription(offer);  
-            })
-            .then(() => {
 
-                sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[receiverId].localDescription}), receiverId);
-            })
-            .then(() => {
-
-                // Update players dropdown
-                var selectPlayersDropDown = document.getElementById("players"); 
-                var player = document.createElement("option");
-                player.textContent = receiverId;
-                player.value = receiverId;
-                selectPlayersDropDown.appendChild(player);
-
-                // TODO: We need to remove the users when they close the browser window 
-
-
-                console.log('creating offer for ', receiverId);
-                // Offerer side
-                channel[receiverId] = peerConnections[receiverId].createDataChannel("milimili" + receiverId);
-                channel[receiverId].onopen = function(event) {
-                channel[receiverId].send('Player 1 ', myId);
-                }
-                channel[receiverId].onmessage = function(event) {
-
-                    var object = JSON.parse(event.data);
-                    console.log('A message received on Offerer side', object);
-                    if(object.id){ // this will be my logic
-                        if(object.id !== myId){
-                            document.getElementById('chat').appendChild(document.createElement('div'));
-                            document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-                        }
-                    }
-                    else 
-                        console.log('Player1: ', event.data);
-                }
-
-                console.log('creating answer for ', receiverId);
-                // // Answerer side
-                peerConnections[receiverId].ondatachannel = function(event) {
-                    channel[receiverId] = event.channel;
-                    channel[receiverId].onopen = function(event) {
-                        channel[receiverId].send('Hi back from answerer!');
-                    }
-                    channel[receiverId].onmessage = function(event) {
-
-                    var object = JSON.parse(event.data);
-                    console.log('A message received on Answerer side', object, object.id);
-                    if(object.id){ // this will be my logic
-                        if(object.id != myId){
-                            document.getElementById('chat').appendChild(document.createElement('div'));
-                            document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-                        }
-                    }
-                    else 
-                        console.log('Here in onmessage of Offerer', event.data);
-                }
-                }
-            });
+        promises.push(shareICECandidatesPromise(receiverId));
     }
+    return Promise.all(promises);
+}
+
+function shareICECandidatesPromise(receiverId) {
+
+    return peerConnections[receiverId].createOffer()
+    .then(offer => { 
+        
+        console.log(offer); peerConnections[receiverId].setLocalDescription(offer);  
+    })
+    .then(() => {
+
+        sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[receiverId].localDescription}), receiverId);
+    })
+    .then(() => {
+
+        // Update players dropdown
+        var selectPlayersDropDown = document.getElementById("players"); 
+        var player = document.createElement("option");
+        player.textContent = receiverId;
+        player.value = receiverId;
+        selectPlayersDropDown.appendChild(player);
+
+        // TODO: We need to remove the users when they close the browser window 
+
+
+        console.log('creating offer for ', receiverId);
+        // Offerer side
+        channel[receiverId] = peerConnections[receiverId].createDataChannel("milimili", {negotiated: true, id: 0});
+        channel[receiverId].onopen = function(event) {
+        channel[receiverId].send('Player 1 ', myId);
+        }
+        channel[receiverId].onmessage = function(event) {
+
+            var object = JSON.parse(event.data);
+            console.log('A message received on Offerer side', object);
+            if(object.id){ // this will be my logic
+                if(object.id !== myId){
+                    document.getElementById('chat').appendChild(document.createElement('div'));
+                    document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+                }
+            }
+            else 
+                console.log('Player1: ', event.data);
+        }
+
+        console.log('creating answer for ', receiverId);
+        
+        // // Answerer side
+        peerConnections[receiverId].ondatachannel = function(event) {
+            channel[receiverId] = event.channel;
+            channel[receiverId].onopen = function(event) {
+                channel[receiverId].send('Hi back from answerer!');
+            }
+            channel[receiverId].onmessage = function(event) {
+
+            var object = JSON.parse(event.data);
+            console.log('A message received on Answerer side', object, object.id);
+            if(object.id){ // this will be my logic
+                if(object.id != myId){
+                    document.getElementById('chat').appendChild(document.createElement('div'));
+                    document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+                }
+            }
+            else 
+                console.log('Here in onmessage of Offerer', event.data);
+            }
+        }
+        console.log('data channel = ', peerConnections[receiverId]);
+    });
 }
 
 function sendMessageFirebase2(senderId, data) {
