@@ -12,6 +12,8 @@ firebase.initializeApp(config);
 var database = firebase.database().ref();
 var yourId = Math.floor(Math.random()*1000000000);
 
+console.log('######## 1');
+
 //Create an account on Viagenie (http://numb.viagenie.ca/), and replace {'urls': 'turn:numb.viagenie.ca','credential': 'websitebeaver','username': 'websitebeaver@email.com'} with the information from your account
 var servers = {
     'iceServers': [
@@ -27,6 +29,8 @@ var pc = new RTCPeerConnection(servers);
 pc.onicecandidate = (event => event.candidate?sendMessage(yourId, JSON.stringify({'ice': event.candidate})) : console.log("Sent All Ice") );
 
 function sendMessage(senderId, data) {
+    
+    console.log('######## 3');
     console.log("Sent All Ice senderId", senderId, "data = ", data);
     var msg = database.push({ sender: senderId, message: data });
     msg.remove();
@@ -34,6 +38,7 @@ function sendMessage(senderId, data) {
 
 function readMessage(data) {
 
+    console.log('######## 4');
     var msg = JSON.parse(data.val().message);
     var sender = data.val().sender;
     if (sender != yourId) {
@@ -52,9 +57,11 @@ function readMessage(data) {
 database.on('child_added', readMessage);
 
 function startGame() {
-  pc.createOffer()
-    .then(offer => pc.setLocalDescription(offer) )
-    .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})) );
+    
+    console.log('######## 2');
+    pc.createOffer()
+        .then(offer => pc.setLocalDescription(offer) )
+        .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})) );
 }
 
 /*************************** ICE connection established ************************************/
@@ -63,10 +70,13 @@ function startGame() {
 
 // Offerer side
 var channel = pc.createDataChannel("milimili");
+console.log('######## 5');
 // channel.onopen = function(event) {
 //   channel.send('Player 1 ', yourId);
 // }
 channel.onmessage = function(event) {
+
+    console.log('######## 8');
 
     var object = JSON.parse(event.data);
     console.log('A message received on Offerer side', object);
@@ -89,6 +99,8 @@ pc.ondatachannel = function(event) {
 //   }
   channel.onmessage = function(event) {
 
+    console.log('######## 9');
+
     var object = JSON.parse(event.data);
     console.log('A message received on Answerer side', object, object.id);
     if(object.id){ // this will be my logic
@@ -108,6 +120,7 @@ function chat() {
         id: yourId,
         message: message
     };
+    console.log('######## 7');
     console.log('data = ', data);
     document.getElementById('chat').appendChild(document.createElement('div'));
     document.getElementById("chat").lastChild.innerHTML += yourId + ': ' + message;
@@ -116,8 +129,10 @@ function chat() {
 
 // handle enter plain javascript
 function handleEnter(e){
+    console.log('######## 6');
     var keycode = (e.keyCode ? e.keyCode : e.which);
     if (keycode == '13') {
       chat();
     }
 }
+console.log('######## 10');
