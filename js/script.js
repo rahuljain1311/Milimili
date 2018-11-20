@@ -63,9 +63,9 @@ function startGame() {
 
 // Offerer side
 var channel = pc.createDataChannel("milimili");
-channel.onopen = function(event) {
-  channel.send('Player 1 ', yourId);
-}
+// channel.onopen = function(event) {
+//   channel.send('Player 1 ', yourId);
+// }
 channel.onmessage = function(event) {
 
     var object = JSON.parse(event.data);
@@ -84,9 +84,9 @@ channel.onmessage = function(event) {
 // Answerer side
 pc.ondatachannel = function(event) {
   var channel = event.channel;
-  channel.onopen = function(event) {
-    channel.send('Hi back from answerer!');
-  }
+//   channel.onopen = function(event) {
+//     channel.send('Hi back from answerer!');
+//   }
   channel.onmessage = function(event) {
 
     var object = JSON.parse(event.data);
