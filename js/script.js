@@ -70,10 +70,10 @@ function shareICECandidatesPromise(receiverId) {
 
         console.log('creating offer for ', receiverId);
         // Offerer side
-        channel[receiverId] = peerConnections[receiverId].createDataChannel("milimili", {negotiated: true, id: 0});
-        channel[receiverId].onopen = function(event) {
-        channel[receiverId].send('Player 1 ', myId);
-        }
+        channel[receiverId] = peerConnections[receiverId].createDataChannel("milimili", {});
+        // channel[receiverId].onopen = function(event) {
+        // channel[receiverId].send('Player 1 ', myId);
+        // }
         channel[receiverId].onmessage = function(event) {
 
             var object = JSON.parse(event.data);
@@ -93,9 +93,9 @@ function shareICECandidatesPromise(receiverId) {
         // // Answerer side
         peerConnections[receiverId].ondatachannel = function(event) {
             channel[receiverId] = event.channel;
-            channel[receiverId].onopen = function(event) {
-                channel[receiverId].send('Hi back from answerer!');
-            }
+            // channel[receiverId].onopen = function(event) {
+            //     channel[receiverId].send('Hi back from answerer!');
+            // }
             channel[receiverId].onmessage = function(event) {
 
             var object = JSON.parse(event.data);
