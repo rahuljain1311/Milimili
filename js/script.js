@@ -72,19 +72,19 @@ function shareICECandidatesPromise(receiverId) {
         // channel[receiverId].onopen = function(event) {
         // channel[receiverId].send('Player 1 ', myId);
         // }
-        channel[receiverId].onmessage = function(event) {
+        // channel[receiverId].onmessage = function(event) {
 
-            var object = JSON.parse(event.data);
-            console.log('A message received on Offerer side', object);
-            if(object.id){ // this will be my logic
-                if(object.id !== myId){
-                    document.getElementById('chat').appendChild(document.createElement('div'));
-                    document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-                }
-            }
-            else 
-                console.log('Player1: ', event.data);
-        }
+        //     var object = JSON.parse(event.data);
+        //     console.log('A message received on Offerer side', object);
+        //     if(object.id){ // this will be my logic
+        //         if(object.id !== myId){
+        //             document.getElementById('chat').appendChild(document.createElement('div'));
+        //             document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+        //         }
+        //     }
+        //     else 
+        //         console.log('Player1: ', event.data);
+        // }
         
         // Answerer side
         peerConnections[receiverId].ondatachannel = function(event) {
@@ -102,8 +102,8 @@ function shareICECandidatesPromise(receiverId) {
                     document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
                 }
             }
-            else 
-                console.log('Here in onmessage of Offerer', event.data);
+            // else 
+            //     console.log('Here in onmessage of Offerer', event.data);
             }
         }
         console.log('data channel = ', peerConnections[receiverId]);
