@@ -67,8 +67,6 @@ function shareICECandidatesPromise(receiverId) {
 
         // TODO: We need to remove the users when they close the browser window 
 
-
-        console.log('creating offer for ', receiverId);
         // Offerer side
         channel[receiverId] = peerConnections[receiverId].createDataChannel("milimili", {});
         // channel[receiverId].onopen = function(event) {
@@ -87,10 +85,8 @@ function shareICECandidatesPromise(receiverId) {
             else 
                 console.log('Player1: ', event.data);
         }
-
-        console.log('creating answer for ', receiverId);
         
-        // // Answerer side
+        // Answerer side
         peerConnections[receiverId].ondatachannel = function(event) {
             channel[receiverId] = event.channel;
             // channel[receiverId].onopen = function(event) {
