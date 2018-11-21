@@ -69,7 +69,7 @@ function shareICECandidatesPromise(receiverId) {
         // TODO: We need to remove the users when they close the browser window 
 
         // Offerer side
-        channel[myId][receiverId] = peerConnections[receiverId].createDataChannel("milimili" + myId + receiverId, {});
+        channel[myId][receiverId] = peerConnections[myId].createDataChannel("milimili" + myId + receiverId, {});
         // channel[myId][receiverId].onopen = function(event) {
         // channel[myId][receiverId].send('Player 1 ', myId);
         // }
@@ -89,11 +89,11 @@ function shareICECandidatesPromise(receiverId) {
         
         // Answerer side
         peerConnections[receiverId].ondatachannel = function(event) {
-            channel[myId][receiverId] = event.channel;
+            channel[receiverId][myId] = event.channel;
             // channel[myId][receiverId].onopen = function(event) {
             //     channel[myId][receiverId].send('Hi back from answerer!');
             // }
-            channel[myId][receiverId].onmessage = function(event) {
+            channel[receiverId][myId].onmessage = function(event) {
 
             var object = JSON.parse(event.data);
             console.log('A message received on Answerer side', object, object.id);
@@ -136,7 +136,7 @@ function readMessage(data) {
     
     if (senderId && myId !== senderId) {
 
-        if(!receiverId && !peerConnections[senderId]){ // The sender is broadcasting its unique id for the first time
+        if(!receiverId && !peerConnections[senderId]){ // Some sender has sent it and I am not that sender. There is no receiver as well.
 
             console.log('Sender is broadcasting= ', senderId);  
             
@@ -152,14 +152,14 @@ function readMessage(data) {
         else if(myId === receiverId ) { // Sender just wants to talk to Receiver and Message is meant for the receiver
     
             if (senderMessage.ice != undefined)
-                peerConnections[senderId].addIceCandidate(new RTCIceCandidate(senderMessage.ice));
+                peerConnections[receiverId].addIceCandidate(new RTCIceCandidate(senderMessage.ice));
             else if (senderMessage.sdp.type == "offer")
-                peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
-                    .then(() => peerConnections[senderId].createAnswer())
-                    .then(answer => peerConnections[senderId].setLocalDescription(answer))
-                    .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[senderId].localDescription}), senderId));
+                peerConnections[receiverId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
+                    .then(() => peerConnections[receiverId].createAnswer())
+                    .then(answer => peerConnections[receiverId].setLocalDescription(answer))
+                    .then(() => sendMessageFirebase3(receiverId, JSON.stringify({'sdp': peerConnections[receiverId].localDescription}), senderId));
             else if (senderMessage.sdp.type == "answer")
-                peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp));
+                peerConnections[receiverId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp));
         }
     }
 }
