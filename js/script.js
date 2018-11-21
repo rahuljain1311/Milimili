@@ -35,6 +35,62 @@ function connectWithOtherPlayers(){
     sendMessageFirebase2(myId, JSON.stringify({'name': name}));
 }
 
+function sendMessageFirebase2(senderId, data) {
+
+    var msg = database.push({ senderId: senderId, message: data });
+    msg.remove();
+}
+
+function sendMessageFirebase3(senderId, data, receiverId) {
+
+    console.log('sender = ', senderId, 'receiver = ', receiverId, 'data = ', data);
+    var msg = database.push({ senderId: senderId, message: data, receiverId: receiverId});
+    msg.remove();
+}
+
+database.on('child_added', readMessage);
+
+function readMessage(data) {
+
+    var senderId = data.val().senderId;
+    var senderMessage = JSON.parse(data.val().message);
+    var receiverId = data.val().receiverId;
+
+    console.log(' reading message --- myid = ',myId,  'senderId = ', senderId, myId !== senderId);
+    
+    if (senderId && myId !== senderId) {
+
+        if(!receiverId && !peerConnections[senderId]){ // Some sender has sent it and I am not that sender. There is no receiver as well.
+
+            console.log('Sender is broadcasting= ', senderId);  
+            
+            // TODO: Update name of each sender
+            const name = 'RJ'
+            sendMessageFirebase2(myId, JSON.stringify({'name': name}));
+
+            peerConnections[senderId] = new RTCPeerConnection(servers);
+            peerConnections[senderId].onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
+    
+            
+        }
+        else if(myId === receiverId ) { // Sender just wants to talk to Receiver and Message is meant for the receiver
+    
+            console.log('sharing ice candidate info here!');
+            if (senderMessage.ice != undefined)
+                peerConnections[receiverId].addIceCandidate(new RTCIceCandidate(senderMessage.ice));
+            else if (senderMessage.sdp.type == "offer")
+                peerConnections[receiverId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
+                    .then(() => peerConnections[receiverId].createAnswer())
+                    .then(answer => peerConnections[receiverId].setLocalDescription(answer))
+                    .then(() => sendMessageFirebase3(receiverId, JSON.stringify({'sdp': peerConnections[receiverId].localDescription}), senderId));
+            else if (senderMessage.sdp.type == "answer")
+                peerConnections[receiverId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp));
+        }
+    }
+}
+
+/*************************** ICE connection established ************************************/
+
 function shareICECandidates (){
     
     const promises = [];
@@ -110,61 +166,6 @@ function shareICECandidatesPromise(receiverId) {
         console.log('data channel = ', peerConnections[receiverId]);
     });
 }
-
-function sendMessageFirebase2(senderId, data) {
-
-    var msg = database.push({ senderId: senderId, message: data });
-    msg.remove();
-}
-
-function sendMessageFirebase3(senderId, data, receiverId) {
-
-    console.log('sender = ', senderId, 'receiver = ', receiverId, 'data = ', data);
-    var msg = database.push({ senderId: senderId, message: data, receiverId: receiverId});
-    msg.remove();
-}
-
-database.on('child_added', readMessage);
-
-function readMessage(data) {
-
-    var senderId = data.val().senderId;
-    var senderMessage = JSON.parse(data.val().message);
-    var receiverId = data.val().receiverId;
-
-    console.log(' reading message --- myid = ',myId,  'senderId = ', senderId, myId !== senderId);
-    
-    if (senderId && myId !== senderId) {
-
-        if(!receiverId && !peerConnections[senderId]){ // Some sender has sent it and I am not that sender. There is no receiver as well.
-
-            console.log('Sender is broadcasting= ', senderId);  
-            
-            // TODO: Update name of each sender
-            const name = 'RJ'
-            sendMessageFirebase2(myId, JSON.stringify({'name': name}));
-
-            peerConnections[senderId] = new RTCPeerConnection(servers);
-            peerConnections[senderId].onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
-    
-            
-        }
-        else if(myId === receiverId ) { // Sender just wants to talk to Receiver and Message is meant for the receiver
-    
-            if (senderMessage.ice != undefined)
-                peerConnections[receiverId].addIceCandidate(new RTCIceCandidate(senderMessage.ice));
-            else if (senderMessage.sdp.type == "offer")
-                peerConnections[receiverId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
-                    .then(() => peerConnections[receiverId].createAnswer())
-                    .then(answer => peerConnections[receiverId].setLocalDescription(answer))
-                    .then(() => sendMessageFirebase3(receiverId, JSON.stringify({'sdp': peerConnections[receiverId].localDescription}), senderId));
-            else if (senderMessage.sdp.type == "answer")
-                peerConnections[receiverId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp));
-        }
-    }
-}
-
-/*************************** ICE connection established ************************************/
 
 function chat() {
     var message = document.getElementById("myInput").value;
