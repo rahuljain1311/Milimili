@@ -38,6 +38,7 @@ function connectWithOtherPlayers(){
 function shareICECandidates (){
     
     const promises = [];
+    channel[myId] = {};
     for (var receiverId in peerConnections){
 
         promises.push(shareICECandidatesPromise(receiverId));
@@ -68,11 +69,11 @@ function shareICECandidatesPromise(receiverId) {
         // TODO: We need to remove the users when they close the browser window 
 
         // Offerer side
-        channel[receiverId] = peerConnections[receiverId].createDataChannel("milimili", {});
-        // channel[receiverId].onopen = function(event) {
-        // channel[receiverId].send('Player 1 ', myId);
+        channel[myId][receiverId] = peerConnections[receiverId].createDataChannel("milimili" + myId + receiverId, {});
+        // channel[myId][receiverId].onopen = function(event) {
+        // channel[myId][receiverId].send('Player 1 ', myId);
         // }
-        // channel[receiverId].onmessage = function(event) {
+        // channel[myId][receiverId].onmessage = function(event) {
 
         //     var object = JSON.parse(event.data);
         //     console.log('A message received on Offerer side', object);
@@ -88,11 +89,11 @@ function shareICECandidatesPromise(receiverId) {
         
         // Answerer side
         peerConnections[receiverId].ondatachannel = function(event) {
-            channel[receiverId] = event.channel;
-            // channel[receiverId].onopen = function(event) {
-            //     channel[receiverId].send('Hi back from answerer!');
+            channel[myId][receiverId] = event.channel;
+            // channel[myId][receiverId].onopen = function(event) {
+            //     channel[myId][receiverId].send('Hi back from answerer!');
             // }
-            channel[receiverId].onmessage = function(event) {
+            channel[myId][receiverId].onmessage = function(event) {
 
             var object = JSON.parse(event.data);
             console.log('A message received on Answerer side', object, object.id);
@@ -181,8 +182,8 @@ function chat() {
     document.getElementById('chat').appendChild(document.createElement('div'));
     document.getElementById("chat").lastChild.innerHTML += myId + ': ' + message;
     console.log('channel = ', channel);
-    console.log('channel[receiverId] = ', channel[receiverId]);
-    channel[receiverId].send(JSON.stringify(data));
+    console.log('channel[myId][receiverId] = ', channel[myId][receiverId]);
+    channel[myId][receiverId].send(JSON.stringify(data));
 }
 
 // handle enter plain javascript
