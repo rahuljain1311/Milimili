@@ -80,27 +80,14 @@ function readMessage(data) {
             if (senderMessage.ice != undefined){
                 peerConnections[senderId].addIceCandidate(new RTCIceCandidate(senderMessage.ice));
             }
-            else if (senderMessage.sdp.type == "offer"){
+            else if (senderMessage.sdp.type == "offer")
                 peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
-                .then(() => {
-
-                    console.log('creating answer', peerConnections[senderId]);
-                    peerConnections[senderId].createAnswer(); 
-                })
-                .then(answer => {
-                 
-                    console.log('setting answer in local description', peerConnections[senderId]);
-                    peerConnections[senderId].setLocalDescription(answer)
-                })
-                .then(() => {
-
-                    console.log('sending local description to offerer', peerConnections[senderId]);
-                    sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[senderId].localDescription}), senderId);
-                })
+                .then(() => peerConnections[senderId].createAnswer())
+                .then(answer => peerConnections[senderId].setLocalDescription(answer))
+                .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[senderId].localDescription}), senderId))
                 .then(() => {
 
                     console.log('after sending offer!', peerConnections[senderId]);
-
                     // Answerer side
                     peerConnections[senderId].ondatachannel = function(event) {
                         channel[myId][senderId] = event.channel;
@@ -119,8 +106,7 @@ function readMessage(data) {
                             }
                         }
                     }
-                });
-            }
+                })
             else if (senderMessage.sdp.type == "answer"){
                 peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
                 .then(() => {
