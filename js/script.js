@@ -84,22 +84,22 @@ function readMessage(data) {
                 peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
                 .then(() => {
 
-                    console.log('creating answer');
+                    console.log('creating answer', peerConnections[senderId]);
                     peerConnections[senderId].createAnswer(); 
                 })
                 .then(answer => {
                  
-                    console.log('setting answer in local description');
+                    console.log('setting answer in local description', peerConnections[senderId]);
                     peerConnections[senderId].setLocalDescription(answer)
                 })
                 .then(() => {
 
-                    console.log('sending local description to offerer');
+                    console.log('sending local description to offerer', peerConnections[senderId]);
                     sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[senderId].localDescription}), senderId);
                 })
                 .then(() => {
 
-                    console.log('after sending offer!');
+                    console.log('after sending offer!', peerConnections[senderId]);
 
                     // Answerer side
                     peerConnections[senderId].ondatachannel = function(event) {
@@ -158,7 +158,7 @@ function readMessage(data) {
             }
         }
     }
-}
+} 
 
 function shareICECandidates (){
     
