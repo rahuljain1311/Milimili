@@ -81,6 +81,9 @@ function readMessage(data) {
                 peerConnections[senderId].addIceCandidate(new RTCIceCandidate(senderMessage.ice));
             }
             else if (senderMessage.sdp.type == "offer")
+
+                // TODO: I am not able to put this .then chain in brackets :(
+
                 peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
                 .then(() => peerConnections[senderId].createAnswer())
                 .then(answer => peerConnections[senderId].setLocalDescription(answer))
@@ -88,6 +91,14 @@ function readMessage(data) {
                 .then(() => {
 
                     console.log('after sending offer!', peerConnections[senderId]);
+
+                    // Update players dropdown
+                    var selectPlayersDropDown = document.getElementById("players"); 
+                    var player = document.createElement("option");
+                    player.textContent = senderId;
+                    player.value = senderId;
+                    selectPlayersDropDown.appendChild(player);
+
                     // Answerer side
                     peerConnections[senderId].ondatachannel = function(event) {
                         channel[myId][senderId] = event.channel;
