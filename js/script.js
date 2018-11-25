@@ -96,7 +96,7 @@ function readMessage(data) {
                     player.value = senderId;
                     selectPlayersDropDown.appendChild(player);
 
-                    channel[senderId] = peerConnections[senderId].createDataChannel("milimili" + myId + senderId, {});
+                    channel[senderId] = peerConnections[senderId].createDataChannel("milimili" + myId + senderId);
                     console.log('channel[senderId] = ', channel[senderId]);
 
                     channel[senderId].onmessage = function(event) {
@@ -138,7 +138,7 @@ function readMessage(data) {
             
                     // TODO: We need to remove the users when they close the browser window 
             
-                    channel[senderId] = peerConnections[senderId].createDataChannel("milimili" + myId + senderId, {});
+                    channel[senderId] = peerConnections[senderId].createDataChannel("milimili" + myId + senderId);
                     console.log('channel[senderId] = ', channel[senderId]);
 
                     channel[senderId].onmessage = function(event) {
@@ -214,7 +214,7 @@ function chat() {
     console.log('data = ', data);
     document.getElementById('chat').appendChild(document.createElement('div'));
     document.getElementById("chat").lastChild.innerHTML += myId + ': ' + message;
-    channel[myId].send(JSON.stringify(data));
+    channel[receiverId].send(JSON.stringify(data));
 }
 
 // handle enter plain javascript
