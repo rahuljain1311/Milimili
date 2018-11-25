@@ -96,41 +96,10 @@ function readMessage(data) {
                     player.value = senderId;
                     selectPlayersDropDown.appendChild(player);
 
-                    // Answerer side
-                    peerConnections[senderId].ondatachannel = function(event) {
-                        channel[myId][senderId] = event.channel;
-                        // channel[myId][myId].onopen = function(event) {
-                        //     channel[myId][myId].send('Hi back from answerer!');
-                        // }
-                        channel[myId][senderId].onmessage = function(event) {
-            
-                            var object = JSON.parse(event.data);
-                            console.log('A message received on Answerer side', object, object.id);
-                            if(object.id){
-                                if(object.id != myId){
-                                    document.getElementById('chat').appendChild(document.createElement('div'));
-                                    document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-                                }
-                            }
-                        }
-                    }
-                })
-            else if (senderMessage.sdp.type == "answer"){
-                peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
-                .then(() => {
+                    channel[senderId] = peerConnections[senderId].createDataChannel("milimili" + myId + senderId, {});
+                    console.log('channel[senderId] = ', channel[senderId]);
 
-                    console.log('after receiving offer in the answer!');
-            
-                    // TODO: We need to remove the users when they close the browser window 
-            
-                    // Offerer side
-                    channel[myId][senderId] = peerConnections[senderId].createDataChannel("milimili" + myId + senderId, {});
-                    console.log('channel[myId][senderId] = ', channel[myId][senderId]);
-
-                    channel[myId][senderId].onopen = function(event) {
-                    channel[myId][senderId].send('Player 1 ', myId);
-                    }
-                    channel[myId][senderId].onmessage = function(event) {
+                    channel[senderId].onmessage = function(event) {
             
                         var object = JSON.parse(event.data);
                         console.log('A message received on Offerer side', object);
@@ -143,6 +112,63 @@ function readMessage(data) {
                         else 
                             console.log('Player1: ', event.data);
                     }
+                    peerConnections[senderId].ondatachannel = function(event) {
+                        var internalChannel= event.channel;
+                        internalChannel.onmessage = function(event) {
+            
+                            var object = JSON.parse(event.data);
+                            console.log('A message received on Answerer side', object, object.id);
+                            if(object.id){
+                                if(object.id != myId){
+                                    document.getElementById('chat').appendChild(document.createElement('div'));
+                                    document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+                                }
+                            }
+                        }
+                    }
+
+
+
+                })
+            else if (senderMessage.sdp.type == "answer"){
+                peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
+                .then(() => {
+
+                    console.log('after receiving offer in the answer!');
+            
+                    // TODO: We need to remove the users when they close the browser window 
+            
+                    channel[senderId] = peerConnections[senderId].createDataChannel("milimili" + myId + senderId, {});
+                    console.log('channel[senderId] = ', channel[senderId]);
+
+                    channel[senderId].onmessage = function(event) {
+            
+                        var object = JSON.parse(event.data);
+                        console.log('A message received on Offerer side', object);
+                        if(object.id){
+                            if(object.id !== myId){
+                                document.getElementById('chat').appendChild(document.createElement('div'));
+                                document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+                            }
+                        }
+                        else 
+                            console.log('Player1: ', event.data);
+                    }
+                    peerConnections[senderId].ondatachannel = function(event) {
+                        var internalChannel= event.channel;
+                        internalChannel.onmessage = function(event) {
+            
+                            var object = JSON.parse(event.data);
+                            console.log('A message received on Answerer side', object, object.id);
+                            if(object.id){
+                                if(object.id != myId){
+                                    document.getElementById('chat').appendChild(document.createElement('div'));
+                                    document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+                                }
+                            }
+                        }
+                    }
+
                 });
             }
         }
@@ -188,7 +214,7 @@ function chat() {
     console.log('data = ', data);
     document.getElementById('chat').appendChild(document.createElement('div'));
     document.getElementById("chat").lastChild.innerHTML += myId + ': ' + message;
-    channel[myId][receiverId].send(JSON.stringify(data));
+    channel[myId].send(JSON.stringify(data));
 }
 
 // handle enter plain javascript
