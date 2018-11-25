@@ -26,6 +26,7 @@ var servers = {
 
 var pc = new RTCPeerConnection(servers);
 pc.onicecandidate = (event => event.candidate?sendMessage(yourId, JSON.stringify({'ice': event.candidate})) : console.log("Sent All Ice") );
+var channel;
 
 function sendMessage(senderId, data) {
     
@@ -45,9 +46,87 @@ function readMessage(data) {
             pc.setRemoteDescription(new RTCSessionDescription(msg.sdp))
               .then(() => pc.createAnswer())
               .then(answer => pc.setLocalDescription(answer))
-              .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})));
+              .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})))
+              .then(() => {
+                    // Answerer side
+                    console.log('answer side');
+
+                    channel = pc.createDataChannel("milimili");
+                    console.log('create data channel ', pc, channel);
+                    pc.ondatachannel = function(event) {
+                        var channel = event.channel;
+                        channel.onmessage = function(event) {
+                    
+                            console.log('channel.onmessage inside pc.ondatachannel on answerer');
+                            var object = JSON.parse(event.data);
+                            console.log('A message received on Answerer side', object, object.id);
+                            if(object.id){
+                                if(object.id != yourId){
+                                    document.getElementById('chat').appendChild(document.createElement('div'));
+                                    document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+                                }
+                            }  console.log('Here in onmessage of Offerer', event.data);
+                        }
+                    }
+                    channel.onmessage = function(event) {
+
+                        console.log('channel.onmessage on asnwerer side');
+                        var object = JSON.parse(event.data);
+                        if(object.id){
+                            if(object.id !== yourId){
+                                document.getElementById('chat').appendChild(document.createElement('div'));
+                                document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+                            }
+                        }
+                        else 
+                            console.log('Player1: ', event.data);
+                    }
+
+              })
         else if (msg.sdp.type == "answer")
-            pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            pc.setRemoteDescription(new RTCSessionDescription(msg.sdp))
+            .then(() => {
+                // Offerer side
+                console.log('offerer side');
+
+
+                channel = pc.createDataChannel("milimili");
+                console.log('create data channel ', pc, channel);
+                
+                channel.onmessage = function(event) {
+
+                    console.log('channel.onmessage on offerer side');
+                    var object = JSON.parse(event.data);
+                    console.log('A message received on Offerer side', object);
+                    if(object.id){
+                        if(object.id !== yourId){
+                            document.getElementById('chat').appendChild(document.createElement('div'));
+                            document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+                        }
+                    }
+                    else 
+                        console.log('Player1: ', event.data);
+                }
+
+                // Answerer side
+                console.log('on oferer side running asnwerer code');
+                pc.ondatachannel = function(event) {
+                    var channel = event.channel;
+                    channel.onmessage = function(event) {
+                
+                        console.log('channel.onmessage inside pc.ondatachannel on offerer');
+                        var object = JSON.parse(event.data);
+                        if(object.id){
+                            if(object.id != yourId){
+                                document.getElementById('chat').appendChild(document.createElement('div'));
+                                document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+                            }
+                        }
+                        console.log('Here in onmessage of Offerer', event.data);
+                    }
+                }
+
+            })
     }
 };
 
@@ -63,50 +142,6 @@ function startGame() {
 /*************************** ICE connection established ************************************/
 
 
-
-// Offerer side
-var channel = pc.createDataChannel("milimili");
-// channel.onopen = function(event) {
-//   channel.send('Player 1 ', yourId);
-// }
-// channel.onmessage = function(event) {
-
-//     console.log('from offerer');
-//     var object = JSON.parse(event.data);
-//     console.log('A message received on Offerer side', object);
-//     if(object.id){ // this will be my logic
-//         if(object.id !== yourId){
-//             document.getElementById('chat').appendChild(document.createElement('div'));
-//             document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-//         }
-//     }
-//     else 
-//         console.log('Player1: ', event.data);
-// }
-
-
-// Answerer side
-pc.ondatachannel = function(event) {
-  var channel = event.channel;
-//   channel.onopen = function(event) {
-//     channel.send('Hi back from answerer!');
-//   }
-  channel.onmessage = function(event) {
-
-    console.log('from answerer');
-    var object = JSON.parse(event.data);
-    console.log('A message received on Answerer side', object, object.id);
-    if(object.id){ // this will be my logic
-        if(object.id != yourId){
-            document.getElementById('chat').appendChild(document.createElement('div'));
-            document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-        }
-    }
-    // else 
-    //     console.log('Here in onmessage of Offerer', event.data);
-  }
-}
-
 function chat() {
     var message = document.getElementById("myInput").value;
     var data = {
@@ -116,6 +151,7 @@ function chat() {
     console.log('data = ', data);
     document.getElementById('chat').appendChild(document.createElement('div'));
     document.getElementById("chat").lastChild.innerHTML += yourId + ': ' + message;
+
     channel.send(JSON.stringify(data));
 }
 
