@@ -12,7 +12,6 @@ firebase.initializeApp(config);
 var database = firebase.database().ref();
 var yourId = Math.floor(Math.random()*1000000000);
 
-
 //Create an account on Viagenie (http://numb.viagenie.ca/), and replace {'urls': 'turn:numb.viagenie.ca','credential': 'websitebeaver','username': 'websitebeaver@email.com'} with the information from your account
 var servers = {
     'iceServers': [
@@ -24,9 +23,38 @@ var servers = {
     ]
 };
 
+var channel;
 var pc = new RTCPeerConnection(servers);
 pc.onicecandidate = (event => event.candidate?sendMessage(yourId, JSON.stringify({'ice': event.candidate})) : console.log("Sent All Ice") );
-var channel;
+
+// let the "negotiationneeded" event trigger offer generation
+pc.onnegotiationneeded = async () => {
+
+    console.log('onnegotiationneeded triggered');
+    try {
+        await pc.setLocalDescription(await pc.createOffer());
+        // send the offer to the other peer
+        sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription}))
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+pc.ondatachannel = function(event) {
+    var channel = event.channel;
+    channel.onmessage = function(event) {
+
+        console.log('channel.onmessage inside pc.ondatachannel on answerer');
+        var object = JSON.parse(event.data);
+        console.log('A message received on Answerer side', object, object.id);
+        if(object.id){
+            if(object.id != yourId){
+                document.getElementById('chat').appendChild(document.createElement('div'));
+                document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+            }
+        }  console.log('Here in onmessage of Offerer', event.data);
+    }
+}
 
 function sendMessage(senderId, data) {
     
@@ -46,87 +74,9 @@ function readMessage(data) {
             pc.setRemoteDescription(new RTCSessionDescription(msg.sdp))
               .then(() => pc.createAnswer())
               .then(answer => pc.setLocalDescription(answer))
-              .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})))
-              .then(() => {
-                    // Answerer side
-                    console.log('answer side');
-
-                    channel = pc.createDataChannel("milimili");
-                    console.log('create data channel ', pc, channel);
-                    pc.ondatachannel = function(event) {
-                        var channel = event.channel;
-                        channel.onmessage = function(event) {
-                    
-                            console.log('channel.onmessage inside pc.ondatachannel on answerer');
-                            var object = JSON.parse(event.data);
-                            console.log('A message received on Answerer side', object, object.id);
-                            if(object.id){
-                                if(object.id != yourId){
-                                    document.getElementById('chat').appendChild(document.createElement('div'));
-                                    document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-                                }
-                            }  console.log('Here in onmessage of Offerer', event.data);
-                        }
-                    }
-                    channel.onmessage = function(event) {
-
-                        console.log('channel.onmessage on asnwerer side');
-                        var object = JSON.parse(event.data);
-                        if(object.id){
-                            if(object.id !== yourId){
-                                document.getElementById('chat').appendChild(document.createElement('div'));
-                                document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-                            }
-                        }
-                        else 
-                            console.log('Player1: ', event.data);
-                    }
-
-              })
+              .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})));
         else if (msg.sdp.type == "answer")
-            pc.setRemoteDescription(new RTCSessionDescription(msg.sdp))
-            .then(() => {
-                // Offerer side
-                console.log('offerer side');
-
-
-                channel = pc.createDataChannel("milimili");
-                console.log('create data channel ', pc, channel);
-                
-                channel.onmessage = function(event) {
-
-                    console.log('channel.onmessage on offerer side');
-                    var object = JSON.parse(event.data);
-                    console.log('A message received on Offerer side', object);
-                    if(object.id){
-                        if(object.id !== yourId){
-                            document.getElementById('chat').appendChild(document.createElement('div'));
-                            document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-                        }
-                    }
-                    else 
-                        console.log('Player1: ', event.data);
-                }
-
-                // Answerer side
-                console.log('on oferer side running asnwerer code');
-                pc.ondatachannel = function(event) {
-                    var channel = event.channel;
-                    channel.onmessage = function(event) {
-                
-                        console.log('channel.onmessage inside pc.ondatachannel on offerer');
-                        var object = JSON.parse(event.data);
-                        if(object.id){
-                            if(object.id != yourId){
-                                document.getElementById('chat').appendChild(document.createElement('div'));
-                                document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-                            }
-                        }
-                        console.log('Here in onmessage of Offerer', event.data);
-                    }
-                }
-
-            })
+            pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
     }
 };
 
@@ -134,13 +84,26 @@ database.on('child_added', readMessage);
 
 function startGame() {
     
-    pc.createOffer()
-        .then(offer => pc.setLocalDescription(offer) )
-        .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})) );
+    channel = pc.createDataChannel("milimili");
+
+    console.log('create data channel ', pc, channel);
+    channel.onmessage = function(event) {
+
+        console.log('channel.onmessage on asnwerer side');
+        var object = JSON.parse(event.data);
+        if(object.id){
+            if(object.id !== yourId){
+                document.getElementById('chat').appendChild(document.createElement('div'));
+                document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+            }
+        }
+        else 
+            console.log('Player1: ', event.data);
+    }
+    
 }
 
 /*************************** ICE connection established ************************************/
-
 
 function chat() {
     var message = document.getElementById("myInput").value;
