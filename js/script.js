@@ -74,7 +74,13 @@ function readMessage(data) {
             pc.setRemoteDescription(new RTCSessionDescription(msg.sdp))
               .then(() => pc.createAnswer())
               .then(answer => pc.setLocalDescription(answer))
-              .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})));
+              .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})))
+              .then(() => {
+
+                    if(!channel){
+                        setupDataChannel();
+                    }
+              })
         else if (msg.sdp.type == "answer")
             pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
     }
@@ -84,6 +90,13 @@ database.on('child_added', readMessage);
 
 function startGame() {
     
+    if(!channel){
+        setupDataChannel();
+    }    
+}
+
+function setupDataChannel(){
+
     channel = pc.createDataChannel("milimili");
 
     console.log('create data channel ', pc, channel);
@@ -97,10 +110,7 @@ function startGame() {
                 document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
             }
         }
-        else 
-            console.log('Player1: ', event.data);
     }
-    
 }
 
 /*************************** ICE connection established ************************************/
