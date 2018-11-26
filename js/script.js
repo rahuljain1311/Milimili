@@ -59,7 +59,7 @@ function readMessage(data) {
     
     if (senderId && myId !== senderId) {
 
-        if(!receiverId && !peerConnections[senderId]){ // Some sender has sent it and I am not that sender. There is no receiver as well.
+        if(!receiverId && !peerConnections[senderId]){ // Some sender wants to broadcast its id and I am not that sender
 
             console.log('Sender is broadcasting= ', senderId);  
             
@@ -69,7 +69,13 @@ function readMessage(data) {
 
             peerConnections[senderId] = new RTCPeerConnection(servers);
             peerConnections[senderId].onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
-    
+            
+            // Update players dropdown
+            var selectPlayersDropDown = document.getElementById("players"); 
+            var player = document.createElement("option");
+            player.textContent = senderId;
+            player.value = senderId;
+            selectPlayersDropDown.appendChild(player);
             
         }
         else if(myId === receiverId ) { // Sender just wants to talk to Receiver and Message is meant for the receiver. I am the receiver
@@ -88,13 +94,6 @@ function readMessage(data) {
                 .then(() => {
 
                     console.log('after sending offer!', peerConnections[senderId]);
-
-                    // Update players dropdown
-                    var selectPlayersDropDown = document.getElementById("players"); 
-                    var player = document.createElement("option");
-                    player.textContent = senderId;
-                    player.value = senderId;
-                    selectPlayersDropDown.appendChild(player);
 
                     channel[senderId] = peerConnections[senderId].createDataChannel("milimili" + myId + senderId);
                     console.log('channel[senderId] = ', channel[senderId]);
