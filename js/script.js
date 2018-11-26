@@ -69,6 +69,31 @@ function readMessage(data) {
 
             peerConnections[senderId] = new RTCPeerConnection(servers);
             peerConnections[senderId].onicecandidate = (event => event.candidate?sendMessageFirebase3(myId, JSON.stringify({'ice': event.candidate}), senderId) : console.log("Sent All Ice") );
+            peerConnections[senderId].ondatachannel = function(event) {
+                var internalChannel= event.channel;
+                internalChannel.onmessage = function(event) {
+    
+                    var object = JSON.parse(event.data);
+                    if(object.id){
+                        if(object.id != myId){
+                            document.getElementById('chat').appendChild(document.createElement('div'));
+                            document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+                        }
+                    }
+                }
+            }
+            // let the "negotiationneeded" event trigger offer generation
+            peerConnections[senderId].onnegotiationneeded = async () => {
+
+                console.log('onnegotiationneeded triggered');
+                try {
+                    await peerConnections[senderId].setLocalDescription(await peerConnections[senderId].createOffer());
+                    // send the offer to the other peer
+                    sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[senderId].localDescription}), senderId);
+                } catch (err) {
+                    console.error(err);
+                }
+            };
             
             // Update players dropdown
             var selectPlayersDropDown = document.getElementById("players"); 
@@ -92,115 +117,50 @@ function readMessage(data) {
                 .then(answer => peerConnections[senderId].setLocalDescription(answer))
                 .then(() => sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[senderId].localDescription}), senderId))
                 .then(() => {
-
-                    console.log('after sending offer!', peerConnections[senderId]);
-
-                    channel[senderId] = peerConnections[senderId].createDataChannel("milimili" + myId + senderId);
-                    console.log('channel[senderId] = ', channel[senderId]);
-
-                    channel[senderId].onmessage = function(event) {
-            
-                        var object = JSON.parse(event.data);
-                        console.log('A message received on Offerer side', object);
-                        if(object.id){
-                            if(object.id !== myId){
-                                document.getElementById('chat').appendChild(document.createElement('div'));
-                                document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-                            }
-                        }
-                        else 
-                            console.log('Player1: ', event.data);
-                    }
-                    peerConnections[senderId].ondatachannel = function(event) {
-                        var internalChannel= event.channel;
-                        internalChannel.onmessage = function(event) {
-            
-                            var object = JSON.parse(event.data);
-                            console.log('A message received on Answerer side', object, object.id);
-                            if(object.id){
-                                if(object.id != myId){
-                                    document.getElementById('chat').appendChild(document.createElement('div'));
-                                    document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-                                }
-                            }
-                        }
-                    }
-
-
-
-                })
-            else if (senderMessage.sdp.type == "answer"){
-                peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp))
-                .then(() => {
-
-                    console.log('after receiving offer in the answer!');
-            
+                    
                     // TODO: We need to remove the users when they close the browser window 
-            
-                    channel[senderId] = peerConnections[senderId].createDataChannel("milimili" + myId + senderId);
-                    console.log('channel[senderId] = ', channel[senderId]);
 
-                    channel[senderId].onmessage = function(event) {
-            
-                        var object = JSON.parse(event.data);
-                        console.log('A message received on Offerer side', object);
-                        if(object.id){
-                            if(object.id !== myId){
-                                document.getElementById('chat').appendChild(document.createElement('div'));
-                                document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-                            }
-                        }
-                        else 
-                            console.log('Player1: ', event.data);
-                    }
-                    peerConnections[senderId].ondatachannel = function(event) {
-                        var internalChannel= event.channel;
-                        internalChannel.onmessage = function(event) {
-            
-                            var object = JSON.parse(event.data);
-                            console.log('A message received on Answerer side', object, object.id);
-                            if(object.id){
-                                if(object.id != myId){
-                                    document.getElementById('chat').appendChild(document.createElement('div'));
-                                    document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
-                                }
-                            }
-                        }
-                    }
-
+                    // This is needed here so that Receiver does not need to press the createDataChannel button
+                    if(!channel[senderId])
+                        createDataChannel(senderId);
                 });
-            }
+            else if (senderMessage.sdp.type == "answer")
+                peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp));
         }
     }
 } 
 
-function shareICECandidates (){
+function createDataChannels (){
     
-    const promises = [];
-    channel[myId] = {};
-    for (var receiverId in peerConnections){
+    for (var senderId in peerConnections){
 
-        promises.push(shareICECandidatesPromise(receiverId));
+        if(!channel[senderId])
+            createDataChannel(senderId);
     }
-    return Promise.all(promises);
 }
 
-function shareICECandidatesPromise(receiverId) {
+function createDataChannel (senderId){
 
-    return peerConnections[receiverId].createOffer()
-    .then(offer => { 
-        
-        console.log(offer); peerConnections[receiverId].setLocalDescription(offer);  
-    })
-    .then(() => {
+    channel[senderId] = peerConnections[senderId].createDataChannel("milimili" + myId + senderId);
+    console.log('myid = ', myId, 'senderId = ', senderId, 'channel[senderId] = ', channel[senderId]);
 
-        sendMessageFirebase3(myId, JSON.stringify({'sdp': peerConnections[receiverId].localDescription}), receiverId);
-    });
+    channel[senderId].onmessage = function(event) {
+
+        var object = JSON.parse(event.data);
+        console.log('A message received on Offerer side', object);
+        if(object.id){
+            if(object.id !== myId){
+                document.getElementById('chat').appendChild(document.createElement('div'));
+                document.getElementById("chat").lastChild.innerHTML += object.id + ': ' + object.message;
+            }
+        }
+    }
 }
 
 /*************************** ICE connection established ************************************/
 
 function chat() {
+
     var message = document.getElementById("myInput").value;
 
     var dropdownElement = document.getElementById("players");
@@ -218,6 +178,7 @@ function chat() {
 
 // handle enter plain javascript
 function handleEnter(e){
+
     var keycode = (e.keyCode ? e.keyCode : e.which);
     if (keycode == '13') {
       chat();
