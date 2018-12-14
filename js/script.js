@@ -122,7 +122,7 @@ function readMessage(data) {
 
                     // This is needed here so that Receiver does not need to press the createDataChannel button
                     if(!channel[senderId])
-                        createDataChannel(senderId);
+                        createDataChannels();
                 });
             else if (senderMessage.sdp.type == "answer")
                 peerConnections[senderId].setRemoteDescription(new RTCSessionDescription(senderMessage.sdp));
@@ -132,7 +132,7 @@ function readMessage(data) {
 
 function createDataChannels (){
     
-    for (var senderId in peerConnections){
+    for (let senderId in peerConnections){
 
         if(!channel[senderId])
             createDataChannel(senderId);
@@ -140,6 +140,8 @@ function createDataChannels (){
 }
 
 function createDataChannel (senderId){
+
+    console.log('senderId = ', senderId);
 
     channel[senderId] = peerConnections[senderId].createDataChannel("milimili" + myId + senderId);
     console.log('myid = ', myId, 'senderId = ', senderId, 'channel[senderId] = ', channel[senderId]);
